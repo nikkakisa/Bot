@@ -5,7 +5,7 @@ import time
 from DDoS import DDoSTool
 from requests.exceptions import ConnectionError
 
-TOKEN = '7701982556:AAGIUx6wy0bIQN6GttO-CaVflrmsWl0Czvk'
+TOKEN = '7644689841:AAHD79WVoyK0WaHGC9ElzPRWJlNT5Gg5yOg'
 OWNER_ID = 7742396488
 ADMIN_IDS = [OWNER_ID]
 ALLOWED_USERS = [OWNER_ID]
