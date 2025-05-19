@@ -4,14 +4,15 @@ import threading
 import time
 from DDoS import DDoSTool
 from requests.exceptions import ConnectionError
+import os
 
-TOKEN = '7644689841:AAHD79WVoyK0WaHGC9ElzPRWJlNT5Gg5yOg'
+TOKEN = os.getenv('TELEGRAM_TOKEN')
 OWNER_ID = 7742396488
 ADMIN_IDS = [OWNER_ID]
 ALLOWED_USERS = [OWNER_ID]
 
 bot = telebot.TeleBot(TOKEN)
-tool = DDoSTool()
+tool = DDoSTool()  # Now auto-loads proxies from proxy.txt
 active_attacks = {}
 user_management_lock = threading.Lock()
 
@@ -99,16 +100,15 @@ def send_welcome(message):
     help_text = ("𝗗𝗗𝗼𝗦 𝗕𝗼𝘁 𝗕𝘆 𝗞𝗶𝘀𝗮✅") + "\n\n" + (
         "𝗔𝘃𝗮𝗶𝗹𝗮𝗯𝗹𝗲 𝗖𝗼𝗺𝗺𝗮𝗻𝗱𝘀:\n"
         "/method [𝘁𝗮𝗿𝗴𝗲𝘁] [𝗽𝗼𝗿𝘁] [𝘁𝗵𝗿𝗲𝗮𝗱𝘀] [𝗿𝗽𝗰] [𝗱𝘂𝗿𝗮𝘁𝗶𝗼𝗻] - 𝗦𝘁𝗮𝗿𝘁 𝗮𝘁𝘁𝗮𝗰𝗸\n"
-        "/methods - 𝗦𝗵𝗼𝘄 𝗮𝗹𝗹 𝗮𝘃𝗮𝗶𝗹𝗮𝗯𝗹𝗲 𝗺𝗲𝘁𝗵𝗼𝗱𝘀\n"
-        "/status - 𝗦𝗵𝗼𝘄 𝗮𝗰𝘁𝗶𝘃𝗲 𝗮𝘁𝘁𝗮𝗰𝗸\n"
-        "/stop_all - 𝗦𝘁𝗼𝗽 𝗮𝗹𝗹 𝗮𝘁𝘁𝗮𝗰𝗸\n\n"
-        "𝗢𝘄𝗻𝗲𝗿 𝗖𝗼𝗺𝗺𝗮𝗻𝗱:\n"
+        "/methods - 𝗦𝗵𝗼𝘄 𝗮𝗹𝗹 𝗮𝘃𝗮𝗶𝗹𝗮𝗯𝗹𝗲 𝗺𝗲𝘁𝗵𝗼𝗱����\n"
+        "/status - 𝗦𝗵𝗼𝘄 𝗮𝗰𝘁𝗶𝘃𝗲 𝗮𝘁𝘁𝗮𝗰𝗸𝘀\n"
+        "/stop_all - 𝗦𝘁𝗼𝗽 𝗮𝗹𝗹 𝗮𝘁𝘁𝗮𝗰𝗸𝘀\n\n"
+        "𝗢𝘄𝗻𝗲𝗿 𝗖𝗼𝗺𝗺𝗮𝗻𝗱𝘀:\n"
         "/add - 𝗔𝗱𝗱 𝗨𝘀𝗲𝗿\n"
         "/remove - 𝗥𝗲𝗺𝗼𝘃𝗲 𝗨𝘀𝗲𝗿\n"
         "/listusers - 𝗨𝘀𝗲𝗿 𝗟𝗶𝘀𝘁\n"
     )
     bot.reply_to(message, help_text, parse_mode=None)
-
 
 @bot.message_handler(commands=['methods'])
 def show_methods(message):
@@ -171,6 +171,7 @@ def create_attack_handler(method):
 
     return handler
 
+# Register all method handlers
 for method in METHOD_INFO.keys():
     bot.message_handler(commands=[method])(create_attack_handler(method))
 
